@@ -327,7 +327,7 @@ panvk_per_arch(get_physical_device_features)(
       .depthClamp = true,
       .depthBiasClamp = true,
       .fillModeNonSolid = PAN_ARCH >= 10,
-      .depthBounds = PAN_ARCH >= 10 && PAN_ARCH < 12,
+      .depthBounds = PAN_ARCH >= 10,
       .wideLines = true,
       .largePoints = true,
       .alphaToOne = PAN_ARCH >= 10,
@@ -440,7 +440,7 @@ panvk_per_arch(get_physical_device_features)(
       .vulkanMemoryModel = true,
       .vulkanMemoryModelDeviceScope = true,
       .vulkanMemoryModelAvailabilityVisibilityChains = true,
-      .shaderOutputViewportIndex = PAN_ARCH >= 10 && PAN_ARCH < 12,
+      .shaderOutputViewportIndex = PAN_ARCH >= 10,
       .shaderOutputLayer = PAN_ARCH >= 10,
       .subgroupBroadcastDynamicId = true,
 
