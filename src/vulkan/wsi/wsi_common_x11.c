@@ -2559,8 +2559,11 @@ x11_manage_present_queue(void *state)
       VkPresentModeKHR present_mode = chain->images[image_index].present_mode;
 
       /* Not necessary to block when we have explicit sync */
+      /* sw images are read by the CPU (X server or XPutImage): wait for the
+       * blit here instead of in vkQueuePresentKHR. */
       bool need_fence_wait =
-            x11_needs_wait_for_fences(chain->base.wsi, wsi_conn, present_mode) &&
+            (chain->base.wsi->sw ||
+             x11_needs_wait_for_fences(chain->base.wsi, wsi_conn, present_mode)) &&
             !chain->base.image_info.explicit_sync;
 
       bool need_timing_fence_wait = x11_swapchain_present_timing_is_out_of_order_completion(
@@ -3405,6 +3408,9 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
       for (unsigned i = 0; i < chain->base.image_count; i++)
          wsi_queue_push(&chain->acquire_queue, i);
    }
+
+   chain->base.sw_fence_wait_in_present_thread =
+      !chain->base.image_info.explicit_sync;
 
    ret = thrd_create(&chain->queue_manager,
                      x11_manage_present_queue, chain);
