@@ -120,6 +120,8 @@ VkResult vk_android_get_ahb_layout(
    VkImageDrmFormatModifierExplicitCreateInfoEXT *out,
    VkSubresourceLayout *out_layouts, int max_planes);
 
+void vk_android_set_owned_ahb(const struct AHardwareBuffer *ahb);
+
 VkResult vk_android_get_ahb_image_properties(
    VkPhysicalDevice pdev_handle,
    const VkPhysicalDeviceImageFormatInfo2 *info,
@@ -177,6 +179,11 @@ vk_android_get_ahb_layout(
    VkSubresourceLayout *out_layouts, int max_planes)
 {
    return VK_ERROR_FEATURE_NOT_PRESENT;
+}
+
+static inline void
+vk_android_set_owned_ahb(const struct AHardwareBuffer *ahb)
+{
 }
 
 static inline VkResult
