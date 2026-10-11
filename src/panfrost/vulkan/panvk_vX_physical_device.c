@@ -317,7 +317,7 @@ panvk_per_arch(get_physical_device_features)(
       .fullDrawIndexUint32 = true,
       .imageCubeArray = true,
       .independentBlend = true,
-      .geometryShader = PAN_ARCH >= 10 && !PANVK_DEBUG(NO_GS),
+      .geometryShader = PAN_ARCH >= 9 && !PANVK_DEBUG(NO_GS),
       .tessellationShader = PAN_ARCH >= 10,
       .sampleRateShading = true,
       .dualSrcBlend = true,
@@ -632,7 +632,7 @@ panvk_per_arch(get_physical_device_features)(
 
       /* VK_EXT_transform_feedback */
       .transformFeedback = PAN_ARCH >= 9,
-      .geometryStreams = PAN_ARCH >= 10 && !PANVK_DEBUG(NO_GS),
+      .geometryStreams = PAN_ARCH >= 9 && !PANVK_DEBUG(NO_GS),
 
       /* v7 doesn't support AFBC(BGR). We need to tweak the texture swizzle to
        * make it work, which forces us to apply the same swizzle on the border
@@ -950,11 +950,11 @@ panvk_per_arch(get_physical_device_properties)(
       .maxTessellationControlTotalOutputComponents = PAN_ARCH >= 10 ? 4096 : 0,
       .maxTessellationEvaluationInputComponents = PAN_ARCH >= 10 ? 128 : 0,
       .maxTessellationEvaluationOutputComponents = PAN_ARCH >= 10 ? 128 : 0,
-      .maxGeometryShaderInvocations = PAN_ARCH >= 10 ? 64 : 0,
-      .maxGeometryInputComponents = PAN_ARCH >= 10 ? 64 : 0,
-      .maxGeometryOutputComponents = PAN_ARCH >= 10 ? 128 : 0,
-      .maxGeometryOutputVertices = PAN_ARCH >= 10 ? 256 : 0,
-      .maxGeometryTotalOutputComponents = PAN_ARCH >= 10 ? 1024 : 0,
+      .maxGeometryShaderInvocations = PAN_ARCH >= 9 ? 64 : 0,
+      .maxGeometryInputComponents = PAN_ARCH >= 9 ? 64 : 0,
+      .maxGeometryOutputComponents = PAN_ARCH >= 9 ? 128 : 0,
+      .maxGeometryOutputVertices = PAN_ARCH >= 9 ? 256 : 0,
+      .maxGeometryTotalOutputComponents = PAN_ARCH >= 9 ? 1024 : 0,
       /* 32 vec4 varyings. */
       .maxFragmentInputComponents = 128,
       /* 8 render targets. */
@@ -1334,8 +1334,11 @@ panvk_per_arch(get_physical_device_properties)(
       .maxMultiDrawCount = 2048,
 
       /* VK_EXT_transform_feedback */
-      /* v9 has no GS yet: one vertex stream. */
-      .maxTransformFeedbackStreams = PAN_ARCH >= 10 ? 4 : PAN_ARCH == 9 ? 1 : 0,
+      /* Streams come from a GS (v9: one without it). */
+      .maxTransformFeedbackStreams =
+         PAN_ARCH >= 10  ? 4
+         : PAN_ARCH == 9 ? (PANVK_DEBUG(NO_GS) ? 1 : 4)
+                         : 0,
       .maxTransformFeedbackBuffers = PAN_ARCH >= 9 ? 4 : 0,
       .maxTransformFeedbackBufferSize = UINT32_MAX,
       .maxTransformFeedbackStreamDataSize = 512,
@@ -1343,8 +1346,9 @@ panvk_per_arch(get_physical_device_properties)(
       .maxTransformFeedbackBufferDataStride = 2048,
       /* v9 JM queries are occlusion only. */
       .transformFeedbackQueries = PAN_ARCH >= 10,
-      .transformFeedbackStreamsLinesTriangles = PAN_ARCH >= 10,
-      .transformFeedbackRasterizationStreamSelect = PAN_ARCH >= 10,
+      .transformFeedbackStreamsLinesTriangles = PAN_ARCH >= 9,
+      .transformFeedbackRasterizationStreamSelect =
+         PAN_ARCH >= 10 || (PAN_ARCH == 9 && !PANVK_DEBUG(NO_GS)),
       .transformFeedbackDraw = true,
 
       /* VK_EXT_shader_tile_image */
