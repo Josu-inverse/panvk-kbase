@@ -759,6 +759,15 @@ panvk_per_arch(create_device)(struct panvk_physical_device *physical_device,
    if (result != VK_SUCCESS)
       goto err_free_priv_bos;
 
+#if PAN_ARCH == 9
+   result = panvk_priv_bo_create(
+      device, 128 * 1024 * 1024,
+      PAN_KMOD_BO_FLAG_NO_MMAP | PAN_KMOD_BO_FLAG_ALLOC_ON_FAULT,
+      VK_SYSTEM_ALLOCATION_SCOPE_DEVICE, &device->tiler_heap2);
+   if (result != VK_SUCCESS)
+      goto err_free_priv_bos;
+#endif
+
    result = panvk_priv_bo_create(
       device,
       PANVK_JM_MAX_VERTICES_INDIRECT * PANVK_JM_MAX_PER_VTX_ATTRIBUTES_INDIRECT_SIZE,
@@ -883,6 +892,7 @@ err_free_priv_bos:
    panvk_priv_bo_unref(device->sample_positions);
    panvk_priv_bo_unref(device->indirect_varying_buffer);
    panvk_priv_bo_unref(device->tiler_heap);
+   panvk_priv_bo_unref(device->tiler_heap2);
    panvk_device_cleanup_mempools(device);
    vk_free(&device->vk.alloc, device->dump_region_size);
 err_free_heaps:
@@ -937,6 +947,7 @@ panvk_per_arch(destroy_device)(struct panvk_device *device,
    panvk_priv_bo_unref(device->tiler_oom.handlers_bo);
     panvk_priv_bo_unref(device->indirect_varying_buffer);
     panvk_priv_bo_unref(device->tiler_heap);
+    panvk_priv_bo_unref(device->tiler_heap2);
     panvk_priv_bo_unref(device->sample_positions);
     panvk_device_cleanup_tls(device);
     panvk_priv_bo_unref(device->gpu_prerast_syncs);
