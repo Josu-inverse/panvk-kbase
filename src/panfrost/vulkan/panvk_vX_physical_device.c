@@ -327,7 +327,7 @@ panvk_per_arch(get_physical_device_features)(
       .depthClamp = true,
       .depthBiasClamp = true,
       .fillModeNonSolid = PAN_ARCH >= 10,
-      .depthBounds = PAN_ARCH >= 10,
+      .depthBounds = PAN_ARCH >= 9,
       .wideLines = true,
       .largePoints = true,
       .alphaToOne = PAN_ARCH >= 10,
@@ -374,7 +374,7 @@ panvk_per_arch(get_physical_device_features)(
       .sparseResidency8Samples = false,
       .sparseResidency16Samples = false,
       .sparseResidencyAliased = false, /* https://gitlab.freedesktop.org/panfrost/mesa/-/issues/237 */
-      .variableMultisampleRate = PAN_ARCH >= 10,
+      .variableMultisampleRate = PAN_ARCH >= 9,
       .inheritedQueries = false,
 
       /* Vulkan 1.1 */
