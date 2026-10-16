@@ -904,6 +904,20 @@ panvk_per_arch(create_device)(struct panvk_physical_device *physical_device,
       VK_SYSTEM_ALLOCATION_SCOPE_DEVICE, &device->indirect_varying_buffer);
    if (result != VK_SUCCESS)
       goto err_free_priv_bos;
+
+#if PAN_ARCH < 9
+   /* Tessellation (jm-v7 014): tess control output, per-patch counts and
+    * tessellator output, reused by every tessellated draw (panvk_gs.h).
+    */
+   if (device->vk.enabled_features.tessellationShader) {
+      result = panvk_priv_bo_create(
+         device, PANVK_TESS_HEAP_SIZE,
+         PAN_KMOD_BO_FLAG_NO_MMAP | PAN_KMOD_BO_FLAG_ALLOC_ON_FAULT,
+         VK_SYSTEM_ALLOCATION_SCOPE_DEVICE, &device->tess_arena);
+      if (result != VK_SUCCESS)
+         goto err_free_priv_bos;
+   }
+#endif
 #endif
 
    result = panvk_priv_bo_create(
@@ -1033,6 +1047,7 @@ err_free_priv_bos:
    panvk_priv_bo_unref(device->tiler_oom.handlers_bo);
    panvk_priv_bo_unref(device->sample_positions);
    panvk_priv_bo_unref(device->indirect_varying_buffer);
+   panvk_priv_bo_unref(device->tess_arena);
    panvk_priv_bo_unref(device->tiler_heap);
    panvk_priv_bo_unref(device->tiler_heap2);
    panvk_device_cleanup_mempools(device);
@@ -1091,6 +1106,7 @@ panvk_per_arch(destroy_device)(struct panvk_device *device,
    panvk_priv_bo_unref(device->printf.bo);
    panvk_priv_bo_unref(device->tiler_oom.handlers_bo);
     panvk_priv_bo_unref(device->indirect_varying_buffer);
+    panvk_priv_bo_unref(device->tess_arena);
     panvk_priv_bo_unref(device->tiler_heap);
     panvk_priv_bo_unref(device->tiler_heap2);
     panvk_priv_bo_unref(device->sample_positions);
