@@ -113,7 +113,10 @@ const struct pan_model pan_model_list[] = {
 
    FIFTHGEN_MODEL(PAN_PROD_ID(12, 8, 0), 4, "G720",  "G720", MODEL_ANISO(ALL),  MODEL_TB_SIZES(65536, 32768),
                                               MODEL_RATES_X(4, 8, 32,  64, 128, 16)),
-   FIFTHGEN_MODEL(PAN_PROD_ID(13, 8, 0), 4, "G725",  "G725", MODEL_ANISO(ALL),  MODEL_TB_SIZES(65536, 65536),
+   /* One product id, three marketing names by core count (Immortalis-G925,
+    * G725, G625); panvk picks the Vulkan deviceName in
+    * panvk_marketing_name(). */
+   FIFTHGEN_MODEL(PAN_PROD_ID(13, 8, 0), 4, "G725/G925",  "G725", MODEL_ANISO(ALL),  MODEL_TB_SIZES(65536, 65536),
                                               MODEL_RATES_X(4, 8, 32, 128, 128, 16)),
    FIFTHGEN_MODEL(PAN_PROD_ID(14, 8, 0), 4, "G1-Ultra",  "G1", MODEL_ANISO(ALL),  MODEL_TB_SIZES(65536, 65536),
                                               MODEL_RATES(4, 8, 128)),
