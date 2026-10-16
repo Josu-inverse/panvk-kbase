@@ -969,6 +969,10 @@ panlib_xfb_capture(constant struct panlib_xfb_params *x)
    }
 }
 
+#include "vp_runs.cl"
+#endif
+
+/* vkCmdDrawIndirectByteCountEXT: the VkDrawIndirectCommand. */
 KERNEL(1)
 panlib_xfb_byte_count_draw(constant uint32_t *counter, uint32_t counter_offset,
                            uint32_t stride, uint32_t instance_count,
@@ -983,9 +987,6 @@ panlib_xfb_byte_count_draw(constant uint32_t *counter, uint32_t counter_offset,
    draw[2] = 0;
    draw[3] = first_instance;
 }
-
-#include "vp_runs.cl"
-#endif
 
 #if (PAN_ARCH == 6 || PAN_ARCH == 7)
 struct panlib_draw_info {
