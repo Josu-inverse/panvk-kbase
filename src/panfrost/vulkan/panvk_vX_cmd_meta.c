@@ -866,6 +866,7 @@ bc_decode_region(struct panvk_cmd_buffer *cmdbuf, struct panvk_image *img,
 /* BC lowmem transcoder (csf-v11/197), see bc/panvk_bc_etc2.comp. Included
  * here rather than at the top to keep the later series' hunks in place. */
 #include "bc/panvk_bc_etc2_spv.h"
+#include "bc/panvk_bc_astc_spv.h"
 #include "panvk_cmd_alloc.h"
 #include "util/os_misc.h"
 #include "vk_enum_to_str.h"
@@ -907,6 +908,8 @@ bc_xcode_mode(VkFormat format)
       return 5;
    case VK_FORMAT_BC5_UNORM_BLOCK:
       return 6;
+   case VK_FORMAT_BC6H_UFLOAT_BLOCK:
+      return 8; /* panvk_bc_astc.comp, which ignores it */
    default:
       assert(format == VK_FORMAT_BC5_SNORM_BLOCK);
       return 7;
@@ -941,7 +944,7 @@ bc_xcode_wg(uint32_t wg[2])
  * specialization constants of panvk_bc_etc2.comp (2 and 3), next to the
  * workgroup size (0, 1). */
 static VkResult
-get_bc_xcode_pipeline(struct panvk_device *dev, uint32_t mode,
+get_bc_xcode_pipeline(struct panvk_device *dev, bool astc, uint32_t mode,
                       VkPipelineLayout *layout_out, VkPipeline *pipeline_out)
 {
    const enum panvk_meta_object_key_type layout_key =
@@ -962,10 +965,12 @@ get_bc_xcode_pipeline(struct panvk_device *dev, uint32_t mode,
       uint32_t wg[2];
       uint32_t mode;
       uint32_t opts;
+      uint32_t astc;
    } key = {
       .type = PANVK_META_OBJECT_KEY_BC_XCODE_SHADER,
-      .mode = mode,
-      .opts = panvk_bc_lm_opts(),
+      .mode = astc ? 0 : mode,
+      .opts = astc ? 0 : panvk_bc_lm_opts(),
+      .astc = astc,
    };
    bc_xcode_wg(key.wg);
    VkPipeline cached = vk_meta_lookup_pipeline(&dev->meta, &key, sizeof(key));
@@ -981,15 +986,15 @@ get_bc_xcode_pipeline(struct panvk_device *dev, uint32_t mode,
       {.constantID = 3, .offset = offsetof(__typeof__(key), opts), .size = 4},
    };
    const VkSpecializationInfo spec = {
-      .mapEntryCount = 4,
+      .mapEntryCount = astc ? 2 : 4,
       .pMapEntries = spec_map,
       .dataSize = sizeof(key),
       .pData = &key,
    };
    const VkShaderModuleCreateInfo module_info = {
       .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-      .codeSize = sizeof(panvk_bc_etc2_spv),
-      .pCode = panvk_bc_etc2_spv,
+      .codeSize = astc ? sizeof(panvk_bc_astc_spv) : sizeof(panvk_bc_etc2_spv),
+      .pCode = astc ? panvk_bc_astc_spv : panvk_bc_etc2_spv,
    };
    const VkComputePipelineCreateInfo info = {
       .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -1008,7 +1013,7 @@ get_bc_xcode_pipeline(struct panvk_device *dev, uint32_t mode,
 }
 
 /* Transcode the BC blocks of one region at src into the ETC2/EAC shadow of
- * a bc_lowmem == 1 image. Must run between meta_compute_start() and
+ * transcoded (panvk_bc_xcoded()) image. Must run between meta_compute_start() and
  * meta_compute_end(). */
 static void
 bc_xcode_region(struct panvk_cmd_buffer *cmdbuf, struct panvk_image *img,
@@ -1025,14 +1030,15 @@ bc_xcode_region(struct panvk_cmd_buffer *cmdbuf, struct panvk_image *img,
    const uint32_t h = MIN2(extent.height + (offset.y - y0), mip.height - y0);
    const uint32_t layers = vk_image_subresource_layer_count(&img->vk, subres);
 
-   assert(img->bc_lowmem == 1);
+   assert(panvk_bc_xcoded(img));
    if (!w || !h || !layers)
       return;
 
    VkPipelineLayout layout;
    VkPipeline pipeline;
-   VkResult result = get_bc_xcode_pipeline(dev, bc_xcode_mode(img->vk.format),
-                                           &layout, &pipeline);
+   VkResult result = get_bc_xcode_pipeline(
+      dev, img->bc_lowmem == 3, bc_xcode_mode(img->vk.format), &layout,
+      &pipeline);
    if (result != VK_SUCCESS) {
       vk_command_buffer_set_error(&cmdbuf->vk, result);
       return;
@@ -1337,7 +1343,7 @@ panvk_per_arch(cmd_bc_decode_zero_initialized)(
           !img->bc_emul)
          continue;
 
-      if (img->bc_gfx && img->bc_lowmem != 1) {
+      if (img->bc_gfx && !panvk_bc_xcoded(img)) {
          any_gfx = true;
          continue;
       }
@@ -1361,7 +1367,7 @@ panvk_per_arch(cmd_bc_decode_zero_initialized)(
          };
          const VkExtent3D extent = vk_image_mip_level_extent(&img->vk, level);
 
-         if (img->bc_lowmem == 1) {
+         if (panvk_bc_xcoded(img)) {
             /* Transcode zero blocks: from the zeroed raw plane, or from a
              * zero row when the image has none. */
             const struct bc_decode_src src =
@@ -1390,7 +1396,7 @@ panvk_per_arch(cmd_bc_decode_zero_initialized)(
 
          if (b->oldLayout != VK_IMAGE_LAYOUT_ZERO_INITIALIZED_EXT ||
              b->newLayout == VK_IMAGE_LAYOUT_ZERO_INITIALIZED_EXT ||
-             !img->bc_gfx || img->bc_lowmem == 1)
+             !img->bc_gfx || panvk_bc_xcoded(img))
             continue;
 
          const uint32_t level_count =
@@ -1435,7 +1441,7 @@ panvk_per_arch(CmdCopyMemoryToImageKHR)(
       struct panvk_cmd_meta_graphics_save_ctx save = {0};
       struct panvk_cmd_meta_compute_save_ctx csave = {0};
       const uint32_t blk_B = vk_format_get_blocksize(bc_img->vk.format);
-      const bool xcode = bc_img->bc_lowmem == 1;
+      const bool xcode = panvk_bc_xcoded(bc_img);
       const uint32_t timing = bc_timing_begin(cmdbuf);
 
       uint64_t blocks = 0;
@@ -1789,7 +1795,7 @@ bc_copy_image_no_raw(struct panvk_cmd_buffer *cmdbuf,
       };
    }
 
-   const bool xcode = dst_img->bc_lowmem == 1;
+   const bool xcode = panvk_bc_xcoded(dst_img);
 
    if (staged) {
       bc_decode_barrier(cmd,
@@ -1850,7 +1856,7 @@ panvk_per_arch(CmdCopyImage2)(VkCommandBuffer commandBuffer,
    bc_timing_end(cmdbuf, timing, dst, r0->extent, pCopyImageInfo->regionCount,
                  vk_image_subresource_layer_count(&dst->vk,
                                                   &r0->dstSubresource),
-                 dst->bc_lowmem == 1 ? BC_TIMING_XCODE : BC_TIMING_DECODE);
+                 panvk_bc_xcoded(dst) ? BC_TIMING_XCODE : BC_TIMING_DECODE);
 }
 
 static void
@@ -1888,7 +1894,7 @@ cmd_copy_image(VkCommandBuffer commandBuffer,
 
    const bool src_blocks = vk_format_is_compressed(bc_src->vk.format);
 
-   if (bc_dst->bc_lowmem == 1) {
+   if (panvk_bc_xcoded(bc_dst)) {
       struct panvk_cmd_meta_compute_save_ctx save = {0};
 
       /* Transcode from the raw blocks the copy just wrote. */
