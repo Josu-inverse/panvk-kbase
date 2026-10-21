@@ -793,8 +793,10 @@ x11_surface_get_capabilities(VkIcdSurfaceBase *icd_surface,
    geom_cookie = xcb_get_geometry(conn, window);
 
    geom = xcb_get_geometry_reply(conn, geom_cookie, &err);
-   if (!geom)
+   if (!geom) {
+      free(err);
       return VK_ERROR_SURFACE_LOST_KHR;
+   }
    {
       VkExtent2D extent = { geom->width, geom->height };
       caps->surfaceCapabilities.currentExtent = extent;
@@ -1173,8 +1175,11 @@ wsi_CreateXcbSurfaceKHR(VkInstance _instance,
    unsigned visual_depth;
    xcb_visualtype_t *visual =
       get_visualtype_for_window(pCreateInfo->connection, pCreateInfo->window, &visual_depth, NULL);
-   if (!visual)
-      return VK_ERROR_OUT_OF_HOST_MEMORY;
+   /* No visual means the window is already gone (destroyed or never
+    * mapped by the X server): that is not an allocation failure, and
+    * vkCreate*SurfaceKHR has no SURFACE_LOST code. Create the surface
+    * anyway, opaque; its queries and swapchain creation then report
+    * VK_ERROR_SURFACE_LOST_KHR, which apps handle (DXVK retries). */
 
    surface = vk_alloc2(&instance->alloc, pAllocator, sizeof(struct wsi_x11_vk_surface), 8,
                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -1185,7 +1190,7 @@ wsi_CreateXcbSurfaceKHR(VkInstance _instance,
    surface->xcb.connection = pCreateInfo->connection;
    surface->xcb.window = pCreateInfo->window;
 
-   surface->has_alpha = visual_has_alpha(visual, visual_depth);
+   surface->has_alpha = visual && visual_has_alpha(visual, visual_depth);
 
    *pSurface = VkIcdSurfaceBase_to_handle(&surface->xcb.base);
    return VK_SUCCESS;
@@ -1208,8 +1213,11 @@ wsi_CreateXlibSurfaceKHR(VkInstance _instance,
    unsigned visual_depth;
    xcb_visualtype_t *visual =
       get_visualtype_for_window(XGetXCBConnection(pCreateInfo->dpy), pCreateInfo->window, &visual_depth, NULL);
-   if (!visual)
-      return VK_ERROR_OUT_OF_HOST_MEMORY;
+   /* No visual means the window is already gone (destroyed or never
+    * mapped by the X server): that is not an allocation failure, and
+    * vkCreate*SurfaceKHR has no SURFACE_LOST code. Create the surface
+    * anyway, opaque; its queries and swapchain creation then report
+    * VK_ERROR_SURFACE_LOST_KHR, which apps handle (DXVK retries). */
 
    surface = vk_alloc2(&instance->alloc, pAllocator, sizeof(struct wsi_x11_vk_surface), 8,
                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -1220,7 +1228,7 @@ wsi_CreateXlibSurfaceKHR(VkInstance _instance,
    surface->xlib.dpy = pCreateInfo->dpy;
    surface->xlib.window = pCreateInfo->window;
 
-   surface->has_alpha = visual_has_alpha(visual, visual_depth);
+   surface->has_alpha = visual && visual_has_alpha(visual, visual_depth);
 
    *pSurface = VkIcdSurfaceBase_to_handle(&surface->xlib.base);
    return VK_SUCCESS;
