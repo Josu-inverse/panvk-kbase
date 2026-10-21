@@ -41,7 +41,7 @@
  * and 18 attributes per vertex (16 user attributes, 2 specials)
  */
 
-#define PANVK_JM_MAX_VERTICES_INDIRECT                (2000000)
+#define PANVK_JM_MAX_VERTICES_INDIRECT                (4000000)
 #define PANVK_JM_MAX_PER_VTX_ATTRIBUTES_INDIRECT_SIZE (18 * 4)
 
 struct panvk_precomp_cache;
