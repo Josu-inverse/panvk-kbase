@@ -979,6 +979,37 @@ panvk_per_arch(create_device)(struct panvk_physical_device *physical_device,
          VK_SYSTEM_ALLOCATION_SCOPE_DEVICE, &device->tess_arena);
       if (result != VK_SUCCESS)
          goto err_free_priv_bos;
+
+      /* jm-v7 106: per heap half, so a batch may reuse what the batch
+       * before it in the same half used (panvk_tess_draw()). Growable:
+       * each commits only up to the highest offset one batch reaches.
+       */
+      if (panvk_v7_tess_batch_budget()) {
+         if (device->tiler_heap2 || panvk_v7_overlap_on()) {
+            result = panvk_priv_bo_create(
+               device,
+               PANVK_JM_MAX_VERTICES_INDIRECT *
+                  PANVK_JM_MAX_PER_VTX_ATTRIBUTES_INDIRECT_SIZE,
+               PAN_KMOD_BO_FLAG_NO_MMAP | PAN_KMOD_BO_FLAG_ALLOC_ON_FAULT,
+               VK_SYSTEM_ALLOCATION_SCOPE_DEVICE,
+               &device->indirect_varying_buffer2);
+            if (result != VK_SUCCESS)
+               goto err_free_priv_bos;
+         }
+         if (device->vk.enabled_features.geometryShader ||
+             device->vk.enabled_features.transformFeedback ||
+             device->vk.enabled_features.fillModeNonSolid) {
+            for (unsigned h = 0; h < 2; h++) {
+               result = panvk_priv_bo_create(
+                  device, PANVK_TESS_GS_SCRATCH_SIZE,
+                  PAN_KMOD_BO_FLAG_NO_MMAP | PAN_KMOD_BO_FLAG_ALLOC_ON_FAULT,
+                  VK_SYSTEM_ALLOCATION_SCOPE_DEVICE,
+                  &device->tess_gs_scratch[h]);
+               if (result != VK_SUCCESS)
+                  goto err_free_priv_bos;
+            }
+         }
+      }
    }
 #endif
 #endif
@@ -1111,6 +1142,9 @@ err_free_priv_bos:
    panvk_priv_bo_unref(device->sample_positions);
    panvk_priv_bo_unref(device->indirect_varying_buffer);
    panvk_priv_bo_unref(device->tess_arena);
+   panvk_priv_bo_unref(device->indirect_varying_buffer2);
+   panvk_priv_bo_unref(device->tess_gs_scratch[0]);
+   panvk_priv_bo_unref(device->tess_gs_scratch[1]);
    panvk_priv_bo_unref(device->tiler_heap);
    panvk_priv_bo_unref(device->tiler_heap2);
    panvk_device_cleanup_mempools(device);
@@ -1170,6 +1204,9 @@ panvk_per_arch(destroy_device)(struct panvk_device *device,
    panvk_priv_bo_unref(device->tiler_oom.handlers_bo);
     panvk_priv_bo_unref(device->indirect_varying_buffer);
     panvk_priv_bo_unref(device->tess_arena);
+    panvk_priv_bo_unref(device->indirect_varying_buffer2);
+    panvk_priv_bo_unref(device->tess_gs_scratch[0]);
+    panvk_priv_bo_unref(device->tess_gs_scratch[1]);
     panvk_priv_bo_unref(device->tiler_heap);
     panvk_priv_bo_unref(device->tiler_heap2);
     panvk_priv_bo_unref(device->sample_positions);
