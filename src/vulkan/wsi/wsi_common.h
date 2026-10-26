@@ -136,6 +136,11 @@ struct wsi_device {
       /* Never report VK_SUBOPTIMAL_KHR. Used to workaround
        * games that cannot handle SUBOPTIMAL correctly. */
       bool ignore_suboptimal;
+
+      /* sw MIT-SHM present: collect the GetGeometry reply of each put on
+       * the event thread instead of blocking the present thread on the
+       * round trip. */
+      bool sw_defer_reply;
    } x11;
 
    struct {
