@@ -7,6 +7,10 @@ libpankmod_lib_files = files(
   'panthor_kmod.c',
 )
 
+if panfrost_kmds.contains('kbase')
+  libpankmod_lib_files += files('kbase_kmod.c')
+endif
+
 libpankmod_lib = static_library(
   'pankmod_lib',
   [libpankmod_lib_files],
