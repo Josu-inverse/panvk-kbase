@@ -602,7 +602,6 @@ panvk_per_arch(create_device)(struct panvk_physical_device *physical_device,
       panvk_priv_mem_write(device->gpu_prerast_arena, 0,
                            struct panvk_gpu_prerast_arena, arena) {
          memset(arena, 0, sizeof(*arena));
-         arena->available = 1;
       }
    }
    if (device->vk.enabled_features.tessellationShader) {
@@ -619,8 +618,24 @@ panvk_per_arch(create_device)(struct panvk_physical_device *physical_device,
       panvk_priv_mem_write(device->gpu_prerast_tess_arena, 0,
                            struct panvk_gpu_prerast_arena, arena) {
          memset(arena, 0, sizeof(*arena));
-         arena->available = 1;
       }
+   }
+   if (panvk_priv_mem_check_alloc(device->gpu_prerast_arena) ||
+       panvk_priv_mem_check_alloc(device->gpu_prerast_tess_arena)) {
+      result = panvk_priv_bo_create(
+         device, sizeof(struct panvk_gpu_prerast_syncs),
+         device->kmod.dev->props.supported_bo_flags &
+            PAN_KMOD_BO_FLAG_CSF_EVENT,
+         VK_SYSTEM_ALLOCATION_SCOPE_DEVICE, &device->gpu_prerast_syncs);
+      if (result != VK_SUCCESS)
+         goto err_free_priv_bos;
+
+      struct panvk_gpu_prerast_syncs *syncs =
+         device->gpu_prerast_syncs->addr.host;
+      *syncs = (struct panvk_gpu_prerast_syncs){
+         .arena = {1},
+         .tess_arena = {1},
+      };
    }
 #endif
 
@@ -750,6 +765,7 @@ err_free_mem_cache:
 err_free_precomp:
    panvk_precomp_cleanup(device);
 err_free_priv_bos:
+   panvk_priv_bo_unref(device->gpu_prerast_syncs);
    panvk_pool_free_mem(&device->gpu_prerast_tess_arena);
    panvk_pool_free_mem(&device->gpu_prerast_arena);
    if (device->printf.bo)
@@ -812,6 +828,7 @@ panvk_per_arch(destroy_device)(struct panvk_device *device,
     panvk_priv_bo_unref(device->indirect_varying_buffer);
     panvk_priv_bo_unref(device->tiler_heap);
     panvk_priv_bo_unref(device->sample_positions);
+    panvk_priv_bo_unref(device->gpu_prerast_syncs);
     panvk_pool_free_mem(&device->gpu_prerast_tess_arena);
     panvk_pool_free_mem(&device->gpu_prerast_arena);
     panvk_device_cleanup_mempools(device);
