@@ -133,6 +133,10 @@ void vk_android_get_ahb_buffer_properties(
 bool vk_android_rp_attachment_has_external_format(
    const VkAttachmentDescription2 *desc);
 
+VkResult vk_common_GetAndroidHardwareBufferPropertiesANDROID(
+   VkDevice device_h, const struct AHardwareBuffer *buffer,
+   VkAndroidHardwareBufferPropertiesANDROID *pProperties);
+
 #else /* defined(VK_USE_PLATFORM_ANDROID_KHR) && ANDROID_API_LEVEL >= 26 */
 
 static inline uint64_t
