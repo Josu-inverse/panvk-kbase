@@ -72,6 +72,8 @@ struct panvk_physical_device {
 
       uint64_t max_supported_va;
       alignas(8) uint64_t heap_used;
+      alignas(8) uint64_t available;
+      alignas(8) uint64_t available_ns;
    } memory;
 
    struct vk_sync_type drm_syncobj_type;
