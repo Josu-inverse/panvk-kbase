@@ -191,6 +191,7 @@ panvk_per_arch(get_physical_device_extensions)(
       .EXT_non_seamless_cube_map = true,
       .EXT_mutable_descriptor_type = PAN_ARCH >= 9,
       .EXT_multisampled_render_to_single_sampled = true,
+      .EXT_multi_draw = PAN_ARCH >= 10,
       .EXT_physical_device_drm = true,
       .EXT_pipeline_creation_cache_control = true,
       .EXT_pipeline_creation_feedback = true,
@@ -789,6 +790,7 @@ panvk_per_arch(get_physical_device_features)(
       .rasterizationOrderColorAttachmentAccess = PAN_ARCH >= 10,
       .rasterizationOrderDepthAttachmentAccess = PAN_ARCH >= 10,
       .rasterizationOrderStencilAttachmentAccess = PAN_ARCH >= 10,
+      .multiDraw = PAN_ARCH >= 10,
    };
 }
 
@@ -1298,6 +1300,9 @@ panvk_per_arch(get_physical_device_properties)(
       /* VK_EXT_provoking_vertex */
       .provokingVertexModePerPipeline = false,
       .transformFeedbackPreservesTriangleFanProvokingVertex = false,
+
+      /* VK_EXT_multi_draw */
+      .maxMultiDrawCount = 2048,
 
       /* VK_EXT_transform_feedback */
       .maxTransformFeedbackStreams = PAN_ARCH >= 10 ? 4 : 0,
