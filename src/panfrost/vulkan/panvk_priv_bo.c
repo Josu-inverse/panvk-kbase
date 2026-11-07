@@ -99,7 +99,7 @@ err_return_va:
 
 err_munmap_bo:
    if (priv_bo->addr.host) {
-      ret = os_munmap(priv_bo->addr.host, pan_kmod_bo_size(bo));
+      ret = pan_kmod_bo_munmap(bo, priv_bo->addr.host, pan_kmod_bo_size(bo));
       assert(!ret);
    }
 
@@ -159,7 +159,8 @@ panvk_priv_bo_destroy(struct panvk_priv_bo *priv_bo)
    }
 
    if (priv_bo->addr.host) {
-      ret = os_munmap(priv_bo->addr.host, pan_kmod_bo_size(priv_bo->bo));
+      ret = pan_kmod_bo_munmap(priv_bo->bo, priv_bo->addr.host,
+                               pan_kmod_bo_size(priv_bo->bo));
       assert(!ret);
    }
 
