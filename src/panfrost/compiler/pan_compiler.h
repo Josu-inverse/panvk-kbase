@@ -36,6 +36,10 @@ struct pan_compile_inputs {
    uint32_t gpu_variant;
    bool is_blend, is_blit;
    bool no_idvs;
+   /* Passthrough already wrote screen-space position for the selected
+    * viewport. Skip nir_lower_viewport_transform so it is not applied twice.
+    */
+   bool skip_viewport_transform;
    uint32_t view_mask;
 
    /* Number of colour buffers gl_FragColor broadcasts to.  Only useful for
