@@ -18,6 +18,9 @@
 #include "vk_debug_utils.h"
 #include "vk_log.h"
 
+#include <errno.h>
+#include <string.h>
+
 static void
 panvk_memory_emit_report(struct panvk_device *device,
                          const struct panvk_device_memory *mem,
@@ -506,8 +509,10 @@ panvk_GetMemoryFdPropertiesKHR(VkDevice _device,
     * the same assumptions the fd-import path uses instead.
     */
    if (phys_dev->kbase_node_path[0]) {
-      if (fd < 0 || lseek(fd, 0, SEEK_END) < 0)
+      if (fd < 0 || lseek(fd, 0, SEEK_END) < 0) {
+         mesa_loge("fd props: fd=%d errno=%d (%s)", fd, errno, strerror(errno));
          return VK_ERROR_INVALID_EXTERNAL_HANDLE;
+      }
 
       /* Matches kbase_kmod_bo_import_fd(..., kmod_flags=0, external): */
       const bool can_do_host_visible = true;
